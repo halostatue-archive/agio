@@ -1,0 +1,14 @@
+.rvmrc
+build/
+pkg/
+*.swp
+*.pyc
+*.rbc
+html/
+doc/
+publish/
+coverage/
+coverage.info
+.rake_tasks~
+.DS_Store
+website/index.html

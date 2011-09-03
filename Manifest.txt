@@ -1,0 +1,7 @@
+History.rdoc
+Manifest.txt
+README.rdoc
+Rakefile
+bin/agio
+lib/agio.rb
+lib/agio/flags.rb

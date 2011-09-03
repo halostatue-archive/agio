@@ -1,0 +1,16 @@
+#!ruby
+
+# main 4.7.3 has a warning in main.rb:
+# main-4.7.3/lib/main.rb:28: warning: redefine libdir
+#
+# map 4.3.0 has a warning in map.rb:
+# map-4.3.0/lib/map.rb:551: warning: method redefined; discarding old to_map
+#
+# Therefore, no warnings.
+#!ruby -w
+
+# require 'agio/main'
+ARGV.each do |arg|
+  html = File.open(arg) { |f| f.read }
+  puts Agio.to_markdown(html)
+end

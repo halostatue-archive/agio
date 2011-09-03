@@ -1,0 +1,23 @@
+= Agio
+
+== Description
+
+Agio is a library and a tool for converting HTML to
+{Markdown}[http://daringfireball.net/projects/markdown/].
+
+=== About the Name
+
+The name was chosen because agio is "a premium on money in exchange", sort of
+the opposite of a markdown. It comes from the Italian aggio (premium), not from
+the Italian agio (ease), although the hope is that there is an ease in use of
+this library.
+
+== Where
+
+* {GitHub}[https://github.com/halostatue/agio]
+
+== Synopsis
+
+  gem install agio
+
+:include: License.rdoc
