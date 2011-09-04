@@ -25,6 +25,7 @@ class Agio < Nokogiri::XML::SAX::Document
 end
 
 require 'agio/flags'
+require 'agio/broker'
 
 class Agio < Nokogiri::XML::SAX::Document
   extend Agio::Flags
@@ -96,7 +97,6 @@ class Agio < Nokogiri::XML::SAX::Document
   ##
   # :method: base_url?
   # Returns +true+ if the base URL has been set.
-
   string_flag :base_url, :public => true
 
   ##
@@ -115,7 +115,6 @@ class Agio < Nokogiri::XML::SAX::Document
   # :method: skip_local_fragments?
   # Returns +true+ if local fragments are supposed to be skipped. See
   # #skip_local_fragments.
-
   boolean_flag :skip_local_fragments, :public => true
 
   def initialize(options = {})
@@ -129,6 +128,7 @@ class Agio < Nokogiri::XML::SAX::Document
     yield self if block_given?
 
     @output = StringIO.new("")
+    @tokens = Agio::Tokens.new
     @parser = Nokogiri::HTML::SAX::Parser.new(self)
   end
 
@@ -136,41 +136,6 @@ class Agio < Nokogiri::XML::SAX::Document
     @parser.parse(html || self.html)
     self
   end
-
-  def wrap(text)
-    formatter = Text::Format.new
-    formatter.columns = @columns
-    formatter.first_indent = 0
-
-    result = ""
-    newlines = 0
-    $stderr.puts text.split(/\n\n/).inspect
-    text.split(/\n\n/).each do |para|
-      #     $stderr.puts para
-      if para.length.nonzero?
-        if para !~ /^[- *]/
-          formatter.format(para).split($/).each do |line|
-          result << line << "\n"
-          end
-        result << "\n"
-        newlines = 2
-        else
-          if para !~ /\A +\Z/
-            result << para << "\n"
-            newlines = 1
-          end
-        end
-      else
-        if newlines < 2
-          result << "\n"
-          newlines += 1
-        end
-      end
-    end
-
-    result
-  end
-  private :wrap
 
   def to_s
     output.string
@@ -184,6 +149,9 @@ class Agio < Nokogiri::XML::SAX::Document
   # Document Methods
   attr_reader :output
   private :output
+
+  attr_reader :tokens
+  private :tokens
 
   def write(data, options = {})
     pure  = options[:pure]
@@ -449,8 +417,8 @@ class Agio < Nokogiri::XML::SAX::Document
   end
 
   def comment(string)
-    #     new_paragraph
-    #     write "<!-- #{string} -->\n"
+    # new_paragraph
+    # write "<!-- #{string} -->\n"
   end
 
   def end_document

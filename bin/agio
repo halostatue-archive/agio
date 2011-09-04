@@ -9,7 +9,8 @@
 # Therefore, no warnings.
 #!ruby -w
 
-# require 'agio/main'
+require 'agio'
+
 ARGV.each do |arg|
   html = File.open(arg) { |f| f.read }
   puts Agio.to_markdown(html)
