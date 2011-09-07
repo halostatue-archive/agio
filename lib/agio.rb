@@ -128,8 +128,8 @@ class Agio < Nokogiri::XML::SAX::Document
     yield self if block_given?
 
     @output = StringIO.new("")
-    @tokens = Agio::Tokens.new
-    @parser = Nokogiri::HTML::SAX::Parser.new(self)
+    @broker = Agio::Broker.new
+    @parser = Nokogiri::HTML::SAX::Parser.new(@broker)
   end
 
   def parse(html = nil)
@@ -150,8 +150,8 @@ class Agio < Nokogiri::XML::SAX::Document
   attr_reader :output
   private :output
 
-  attr_reader :tokens
-  private :tokens
+  attr_reader :broker
+  private :broker
 
   def write(data, options = {})
     pure  = options[:pure]

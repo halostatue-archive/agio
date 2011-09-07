@@ -1,10 +1,14 @@
 # -*- ruby encoding: utf-8 -*-
 
+require 'agio/block'
+require 'agio/data'
+
 ##
-# The Broker class is the object that contains the intermediate format for
-# Agio that will then be converted into Markdown text.
+# The Broker class is the object that transforms HTML into an intermediate
+# format for Agio so that the intermediate format can be converted into
+# Markdown text.
 #
-# The broker has two primary data structures it keeps: the block list
+# The Broker has two primary data structures it keeps: the block list
 # (#blocks) and the block stack (#stack).
 #
 # The block list is an array of completed blocks for the document that, when
@@ -13,6 +17,9 @@
 #
 # The block stack is where the blocks reside during creation.
 #
+# Agio::Broker is a Nokogiri::XML::SAX::Document and can be used by the
+# Nokogiri SAX parser to fill the block list.
+#
 # == Algorithm
 # Assume a fairly simple HTML document:
 #
@@ -20,52 +27,52 @@
 #   &lt;p&gt;Lorem ipsum dolor sit amet,
 #   &lt;strong&gt;consectetur&lt;/strong&gt; adipiscing.&lt;/p&gt;
 #
-# When the first element ("h1") is observed, a new Block will be created on
+# When the first element ("h1") is observed, a new block will be created on
 # the stack:
 #
 #   Blocks[ ]
-#   Stack [ Block(h1) ]
+#   Stack [ block(h1) ]
 #
-# The text will be appended to the Block:
+# The text will be appended to the block:
 #
 #   Blocks[ ]
-#   Stack [ Block(h1, Title) ]
+#   Stack [ block(h1, Title) ]
 #
-# When the closing tag for the element is observed, the Block will be popped
-# from the stack and pushed to the end of the Blocks.
+# When the closing tag for the element is observed, the block will be popped
+# from the stack and pushed to the end of the blocks list.
 #
-#   Blocks[ Block(h1, Title) ]
+#   Blocks[ block(h1, Title) ]
 #   Stack [ ]
 #
 # The same happens for the second element ("p") and its text:
 #
-#   Blocks[ Block(h1, Title) ]
-#   Stack [ Block(p, Lorem ipsum dolor it amet) ]
+#   Blocks[ block(h1, Title) ]
+#   Stack [ block(p, Lorem ipsum dolor it amet) ]
 #
 # When the "strong" element is received, though, it and its text are pushed
 # onto the stack:
 #
-#   Blocks[ Block(h1, Title) ]
-#   Stack [ Block(p, Lorem ipsum dolor it amet),
-#           Block(strong, consectetur)
+#   Blocks[ block(h1, Title) ]
+#   Stack [ block(p, Lorem ipsum dolor it amet),
+#           block(strong, consectetur)
 #         ]
 #
 # When the closing tag for the "strong" element is received, the "strong"
-# Block is popped off the stack and appended to the Block at the top of the
+# block is popped off the stack and appended to the block at the top of the
 # stack.
 #
-#   Blocks[ Block(h1, Title) ]
-#   Stack [ Block(p, Lorem ipsum dolor it amet,
-#                 Block(strong, consectetur)
+#   Blocks[ block(h1, Title) ]
+#   Stack [ block(p, Lorem ipsum dolor it amet,
+#                 block(strong, consectetur)
 #         ]
 #
 # Finally, the text is appended, the closing tag for the "p" element shows
-# up, and that Block is popped off the stack and appended to the Blocks
+# up, and that block is popped off the stack and appended to the blocks
 # list:
 #
-#   Blocks[ Block(h1, Title),
-#           Block(p, Lorem ipsum dolor it amet,
-#                 Block(strong, consectetur), adipiscing)
+#   Blocks[ block(h1, Title),
+#           block(p, Lorem ipsum dolor it amet,
+#                 block(strong, consectetur), adipiscing)
 #         ]
 #   Stack [ ]
 #
@@ -80,7 +87,7 @@
 #
 # When encountered, this will be treated as:
 #
-#   Stack [ Block(p, Lorem ipsum dolor sit amet,) ]
+#   Stack [ block(p, Lorem ipsum dolor sit amet,) ]
 #
 # If a span element is encountered, an implicit "p" block element will still
 # be assumed.
@@ -89,8 +96,8 @@
 #
 # Will produce:
 #
-#   Stack [ Block(p),
-#           Block(em, Lorem ipsum dolor sit amet,)
+#   Stack [ block(p),
+#           block(em, Lorem ipsum dolor sit amet,)
 #         ]
 #
 # A special case exists for the "li", "dt", and "dd" tags; if they are
@@ -106,16 +113,16 @@
 #
 # Before the closing "p" tag is observed, the stack looks like this:
 #
-#   Stack [ Block(p, Lorem ipsum dolor it amet),
-#           Block(strong, consectetur adipiscing)
+#   Stack [ block(p, Lorem ipsum dolor it amet),
+#           block(strong, consectetur adipiscing)
 #         ]
 #
-# When the "p" tag is observed, the Broker sees that the topmost Block was
-# not opened with a "p" tag, so it *implicitly* closes the topmost Block as
+# When the "p" tag is observed, the Broker sees that the topmost block was
+# not opened with a "p" tag, so it *implicitly* closes the topmost block as
 # defined above, resulting in:
 #
-#   Blocks[ Block(p, Lorem ipsum dolor it amet,
-#                 Block(strong, consectetur adipiscing)
+#   Blocks[ block(p, Lorem ipsum dolor it amet,
+#                 block(strong, consectetur adipiscing)
 #         ]
 #
 # ==== Unclosed Elements Between Blocks
@@ -129,155 +136,29 @@
 # If the Broker has processed the the first "p" element:
 #
 #   Blocks[ ]
-#   Stack [ Block(p, Lorem ipsum dolor it amet,) ]
+#   Stack [ block(p, Lorem ipsum dolor it amet,) ]
 #
 # When the second "p" opening tag is seen, Agio::Broker treats this as
 # having an implicit closing "p" tag:
 #
-#   Blocsk[ Block(p, Lorem ipsum dolor it amet,) ]
-#   Stack [ Block(p) ]
+#   Blocsk[ block(p, Lorem ipsum dolor it amet,) ]
+#   Stack [ block(p) ]
 #
 # This behaviour does not apply to a nestable element.
 #
 # === Nestable HTML Elements
 # Some HTML elements are considered nestable by Agio::Broker. These
 # currently include "blockquote", "ol", and "ul". When opening tags for
-# these types are observed, these tags do not cause a current Block of the
+# these types are observed, these tags do not cause a current block of the
 # same type to be shifted as outlined above. Nestable elements can contain
 # other HTML block elements; "li" elements are special in that they cannot
 # directly contain another "li", but they can contain other HTML block
 # elements.
 class Agio::Broker < Nokogiri::XML::SAX::Document
-  def self.reload
-    load __FILE__
-  end
-
-  def self.setup
-    h = IO.readlines("test/html/rspec.html").join
-    b = self.new
-    p = Nokogiri::HTML::SAX::Parser.new(b)
-    [ h, b, p ]
-  end
-
-  ##
-  # A Block is the fundamental collection for the Broker that is used to
-  # then generate the Markdown.
-  class Block
-    def inspect
-      if options.empty?
-        %Q(#<#{self.class} #{name} #{contents.inspect}>)
-      else
-        %Q(#<#{self.class} #{name}(#{options.inspect}) #{contents.inspect}>)
-      end
-    end
-
-    # The name of the element the Block is for.
-    attr_reader :name
-
-    # The options, if provided, for the element.
-    attr_reader :options
-
-    # The contents of the Block.
-    attr_reader :contents
-
-    # The description of the HTML element the Block represents (this will
-    # always be a Nokogiri::HTML::ElementDescription or +nil+).
-    attr_reader :description
-    private :description
-
-    def initialize(name, options = {})
-      @name, @options = name, options
-      @description = Nokogiri::HTML::ElementDescription[name]
-      @contents = []
-    end
-
-    # Append the contents provided to the Block.
-    def append(*contents)
-      @contents.push(*contents)
-    end
-
-    # Returns +true+ if the Block is a standard HTML element (as understood
-    # by Nokogiri).
-    def standard?
-      !!description
-    end
-
-    # Returns +true+ if the Block is an HTML inline element.
-    def inline?
-      description && description.inline?
-    end
-
-    # Returns +true+ if the Block is an HTML block element.
-    def block?
-      description && description.block?
-    end
-
-    def can_contain?(other)
-      description && description.sub_elements.include?(other.name)
-    end
-
-    def li?
-      name == "li"
-    end
-
-    def pre?
-      name == "pre"
-    end
-
-    def ul_ol?
-      name == "ul" or name == "ol"
-    end
-
-    def definition?
-      name == "dt" or name == "dd"
-    end
-
-    def dl?
-      definition? or name == "dl"
-    end
-
-    # Determine whether the +other+ Block is a sibling of this Block.
-    # Blocks are siblings if:
-    #
-    # 1. This Block cannot contain the other Block.
-    # 2. This Block is a definition ('dt' or 'dd') and so is the other
-    #    Block.
-    # 3. This Block's name and the other Block's name are the same.
-    def sibling_of?(other)
-      if can_contain? other
-        false
-      elsif definition? and other.definition?
-        true
-      elsif name == other.name
-        true
-      else
-        false
-      end
-    end
-  end
-
-  class Data
-    def initialize(value)
-      @value = value
-    end
-
-    attr_reader :value
-
-    def to_s
-      value
-    end
-
-    def inspect
-      %Q(#<#{self.class} #{value.inspect}>)
-    end
-  end
-  class CData < Data; end
-  class Comment < Data; end
-  class XMLDecl < Data; end
-
   ##
   # The array of completed document subsections. Each entry is a root object
-  # for contained contents.
+  # for contained contents. When HTML parsing is complete, this attribute
+  # should be read for the structures that must be translated into Markdown.
   attr_reader :blocks
 
   ##
@@ -288,8 +169,6 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   def initialize
     @blocks   = []
     @stack    = []
-
-    @abbrevs  = {}
   end
 
   ##
@@ -298,24 +177,24 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   # will cause 'head' objects to be popped from the stack and then be
   # ignored.
   def push(object)
-    object = Data.new(object) if object.kind_of? String
+    object = Agio::Data.new(object) if object.kind_of? String
 
     case object
-    when Data
-      # The stack will only ever contain Block objects; so if we get a Data
-      # object, we need push a Block onto the stack and then append the Data to
-      # the Block.
-      push Block.new('p') if stack.empty?
+    when Agio::Data
+      # The stack will only ever contain Agio::Block objects; so if we get a
+      # Agio::Data object, we need push a Agio::Block onto the stack and
+      # then append the Agio::Data to the Agio::Block.
+      push Agio::Block.new('p') if stack.empty?
       stack[-1].append object
-    when Block
-      # We don't care about the outer 'html' element; this would be discarded if
-      # we did, so let's expicitly skip it.
+    when Agio::Block
+      # We don't care about the outer 'html' element; this would be
+      # discarded if we did, so let's explicitly skip it.
       return nil if object.name == 'html'
 
       # Similarly to the 'html element, we don't care about the 'body'
       # element. We will discard it, but since we collect the 'head' tag, we
-      # need to make sure that any existing 'head' Block is popped off the
-      # stack as we ignore the 'body' element.
+      # need to make sure that any existing 'head' Agio::Block is popped off
+      # the stack as we ignore the 'body' element.
       if object.name == 'body'
         pop 'head'
         return nil
@@ -364,11 +243,11 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
 
       if stack.empty?
         if object.li?
-          push Block.new("ul")
+          push Agio::Block.new("ul")
         elsif object.definition?
-          push Block.new("dl")
+          push Agio::Block.new("dl")
         elsif object.inline?
-          push Block.new("p")
+          push Agio::Block.new("p")
         end
       else
         top = stack[-1]
@@ -376,12 +255,12 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
         if object.li? and not top.ul_ol?
           # If the top item isn't a "ul" or "ol" element, push that on
           # first.
-          push Block.new("ul")
+          push Agio::Block.new("ul")
         elsif object.definition? and not top.dl?
           # If the top item is a definition item ("dt" or "dd") and the top
           # item isn't one of those or a definition list ("dl"), push that
           # on first.
-          push Block.new("dl")
+          push Agio::Block.new("dl")
         end
       end
 
@@ -390,6 +269,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
   private :push
 
+  ##
   # Pop one or more blocks from the stack and process the popped blocks.
   # Returns the last block popped.
   #
@@ -401,7 +281,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   # processed until either the stack is empty or the popped item's block
   # name matches the value of +until_element+.
   #
-  # === Block Processing
+  # === Agio::Block Processing
   # For each block popped off the stack:
   #
   # 1. If the stack is empty, append the block to the #blocks array.
@@ -442,16 +322,16 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   private :pop
 
   def cdata_block(string)
-    push CData.new(string)
+    push Agio::CData.new(string)
   end
 
   def characters(string)
     return if (stack.empty? or stack[-1].pre?) and string =~ /\A\s+\Z/
-    push Data.new(string)
+    push Agio::Data.new(string)
   end
 
   def comment(string)
-    push Comment.new(string)
+    push Agio::Comment.new(string)
   end
 
   def end_document
@@ -482,11 +362,11 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
                 { :attrs => Hash[attrs] }
               end
 
-    push Block.new(name, options)
+    push Agio::Block.new(name, options)
   end
 
   def start_element_namespace(name, attrs = [], prefix = nil, uri = nil, ns = [])
-    push Block.new(name, :attrs => attrs, :prefix => prefix,
+    push Agio::Block.new(name, :attrs => attrs, :prefix => prefix,
                          :uri => uri, :ns => ns)
   end
 
@@ -495,7 +375,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
 
   def xmldecl(version, encoding, standalone)
-    push XMLDecl.new([version, encoding, standalone])
+    push Agio::XMLDecl.new([version, encoding, standalone])
   end
 end
 
