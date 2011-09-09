@@ -26,6 +26,7 @@ end
 
 require 'agio/flags'
 require 'agio/broker'
+require 'agio/bourse'
 
 class Agio < Nokogiri::XML::SAX::Document
   extend Agio::Flags
@@ -129,15 +130,24 @@ class Agio < Nokogiri::XML::SAX::Document
 
     @output = StringIO.new("")
     @broker = Agio::Broker.new
-    @parser = Nokogiri::HTML::SAX::Parser.new(@broker)
+    @parser = Nokogiri::HTML::SAX::Parser.new(broker)
   end
 
-  def parse(html = nil)
-    @parser.parse(html || self.html)
+  def parse(html)
+    @parser.parse(html)
+    self
+  end
+  private :parse
+
+  def convert(html)
+    parse(html)
+    bourse = Agio::Bourse.new(broker.blocks, self)
+    output.write(bourse.convert)
     self
   end
 
-  def to_s
+  def to_s(html = nil)
+    convert(html || self.html)
     output.string
   end
   alias to_markdown to_s
