@@ -22,8 +22,8 @@ module Agio::Flags
   # Calls the initializer methods created by the flag methods in
   # ClassMethods.
   def reset_flags(with_public = false)
-    self.class.flag_inits { |init| __send__ init }
-    self.class.public_flag_inits { |init| __send__ init } if with_public
+    self.class.flag_inits.each { |init| __send__ init }
+    self.class.public_flag_inits.each { |init| __send__ init } if with_public
   end
   private :reset_flags
 end

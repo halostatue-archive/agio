@@ -43,23 +43,25 @@ class Agio < Nokogiri::XML::SAX::Document
   # +pre+ bodies and other items which do not wrap well in most Markdown
   # parsers.
   def columns
-    @formatter.columns
+    bourse.formatter.columns
   end
   ##
   # :attr_writer:
   # The width of the body text for the generated Markdown text outside of
   # +pre+ bodies and other items which do not wrap well in most Markdown
   # parsers.
+  #
+  # If +nil+ is provided, the default value of 75 is set.
   def columns=(value)
-    @formatter.columns = value unless value.nil?
-    @formatter.columns
+    bourse.formatter.columns = value || 75
+    bourse.formatter.columns
   end
 
   ##
   # :attr_reader:
   # Controls how links are placed in the Markdown document.
   def link_placement
-    @link_placement
+    bourse.link_placement
   end
   # :attr_writer: link_placement
   # Controls how links are placed in the Markdown document.
@@ -78,30 +80,26 @@ class Agio < Nokogiri::XML::SAX::Document
   #             http://example.org" is placed at the end of the document.
   #             Used if the value of link_placement is <tt>:endnote</tt>.
   def link_placement=(value)
-    value = case value
-            when :inline, :paragraph, :endnote
-              value
-            when nil
-              :inline
-            else
-              warn "Invalid value for link placement: #{value}; using inline."
-              :inline
-            end
-    @link_placement = value
+    bourse.link_placement = value
   end
 
   ##
-  # :attr_accessor: base_url
+  # :attr_reader: base_url
   # The base URL for implicit (or local) link references. If not provided,
   # links will remain implicit. This is a String value.
+  def base_url
+    bourse.base_url
+  end
+  ##
+  # :attr_writer: base_url
+  # The base URL for implicit (or local) link references. If not provided,
+  # links will remain implicit. This is a String value.
+  def base_url=(value)
+    bourse.base_url = value
+  end
 
   ##
-  # :method: base_url?
-  # Returns +true+ if the base URL has been set.
-  string_flag :base_url, :public => true
-
-  ##
-  # :attr_accessor: skip_local_fragments
+  # :attr_reader: skip_local_fragments
   # Controls whether local link references containing fragments will be
   # output in the final document.
   #
@@ -111,16 +109,28 @@ class Agio < Nokogiri::XML::SAX::Document
   #
   # If this value is +true+, links that refer to fragments on local URIs
   # will be ignored (such as '&lt;a href="about.html#address"&gt;').
+  def skip_local_fragments
+    bourse.skip_local_fragments
+  end
 
   ##
-  # :method: skip_local_fragments?
-  # Returns +true+ if local fragments are supposed to be skipped. See
-  # #skip_local_fragments.
-  boolean_flag :skip_local_fragments, :public => true
+  # :attr_writer: skip_local_fragments
+  # Controls whether local link references containing fragments will be
+  # output in the final document.
+  #
+  # A local link reference is either an implicit link reference (one missing
+  # the protocol and host, such as '&lt;a href="about.html"&gt;' or '&lt;a
+  # href="/about.html"&gt;') or one that points to the #base_url.
+  #
+  # If this value is +true+, links that refer to fragments on local URIs
+  # will be ignored (such as '&lt;a href="about.html#address"&gt;').
+  def skip_local_fragments=(value)
+    bourse.skip_local_fragments = value
+  end
 
   def initialize(options = {})
-    @formatter = Text::Format.new
-    @formatter.first_indent = 0
+    @broker = Agio::Broker.new
+    @bourse = Agio::Bourse.new(broker, self)
 
     self.html           = options[:html]
     self.columns        = options[:columns]
@@ -128,8 +138,6 @@ class Agio < Nokogiri::XML::SAX::Document
 
     yield self if block_given?
 
-    @output = StringIO.new("")
-    @broker = Agio::Broker.new
     @parser = Nokogiri::HTML::SAX::Parser.new(broker)
   end
 
@@ -139,16 +147,15 @@ class Agio < Nokogiri::XML::SAX::Document
   end
   private :parse
 
-  def convert(html)
+  def transform(html)
     parse(html)
-    bourse = Agio::Bourse.new(broker.blocks, self)
-    output.write(bourse.convert)
+    bourse.transform
     self
   end
 
   def to_s(html = nil)
-    convert(html || self.html)
-    output.string
+    transform(html || self.html)
+    bourse.output.string
   end
   alias to_markdown to_s
 
@@ -156,13 +163,13 @@ class Agio < Nokogiri::XML::SAX::Document
     self.new.parse(html).to_markdown
   end
 
-  # Document Methods
-  attr_reader :output
-  private :output
-
   attr_reader :broker
   private :broker
 
+  attr_reader :bourse
+  private :bourse
+
+  # Document Methods
   def write(data, options = {})
     pure  = options[:pure]
     force = options[:force]
@@ -314,7 +321,7 @@ class Agio < Nokogiri::XML::SAX::Document
     when "a"
       if tag_start
         href = attrs['href']
-        if href and not (skip_local_fragments? and href =~ /^#/)
+        if href and not (skip_local_fragments and href =~ /^#/)
           link_stack.push attrs
           write "["
         else
