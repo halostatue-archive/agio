@@ -20,17 +20,15 @@ require 'text/format'
 #
 # == License
 # This code is licensed under MIT License
-class Agio#< Nokogiri::XML::SAX::Document
-  VERSION = "1.0.0"
+class Agio
+  VERSION = "0.5.0"
 end
 
 require 'agio/flags'
 require 'agio/broker'
 require 'agio/bourse'
 
-class Agio#< Nokogiri::XML::SAX::Document
-  extend Agio::Flags
-
+class Agio
   ##
   # :attr_accessor:
   # The default HTML document to be processed. Because the #parse method can
