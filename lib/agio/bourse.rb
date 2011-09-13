@@ -154,7 +154,7 @@ class Agio::Bourse
       blocks << link_references
     end
 
-    blocks.join("\n\n")
+    output.write(blocks.join("\n\n"))
   end
 
   def link_references(clear = nil)
@@ -170,32 +170,34 @@ class Agio::Bourse
   end
   private :link_references
 
-  def escape(string)
-    string.
-      gsub(/\*/) { "\\*" }.
-      gsub(/_/) { "\\_" }.
-      gsub(/^(\d+\. )/) { "\\$1" }
+  def escape(string, parents)
+    unless parents.include? "pre"
+      string = string.
+        gsub(/\*/) { "\\*" }.
+        gsub(/`/) { "\\`" }.
+        gsub(/_/) { "\\_" }.
+        gsub(/^(\d+\. )/) { "\\$1" }
+    end
+    string
   end
 
   def transform_block(block, parents = [])
     contents = block.contents.map { |object|
       case object
       when String
-        escape(object)
+        escape(object, parents)
       when Agio::Data
-        escape(object.value)
+        escape(object.value, parents)
       when Agio::Block
         transform_block(object, parents + [ block.name ])
       end
     }
 
-    p contents if block.name =~ /[uo]l/
-
     case block.name
     when /^h([1-6])$/
       "#{"#" * $1.to_i} #{contents.join}"
     when "p", "div"
-      contents.join
+      formatter.format_one_paragraph(contents.join).chomp
     when "br"
       "  "
     when "hr"
@@ -207,7 +209,9 @@ class Agio::Bourse
     when "strong", "b"
       "**#{contents.join}**"
     when "blockquote"
-      "> #{contents.join}"
+      contents.map { |line|
+        line.split($/).map { |part| "> #{part}" }.join("\n")
+      }.join("\n")
     when "code"
       if parents.include? "pre"
         contents.join
@@ -290,16 +294,46 @@ class Agio::Bourse
     when "dd"
       ":   #{contents.join}"
     when "ol"
-      contents = contents.select { |line| not line.chomp.empty? }
-      item = 0
-      contents.map { |line| "#{item += 1}.  #{line}" }.join("\n")
+      count = 0
+      contents.map { |line|
+        next if line.strip.empty?
+        first, *rest = line.split($/)
+
+        fpref = "#{count += 1}.  "
+        first = "#{fpref}#{first}"
+
+        if rest.empty?
+          first
+        else
+          rpref = " " * fpref.size
+          rest = rest.map { |part| "#{rpref}#{part}" }
+          [ first, rest ].flatten.join("\n")
+        end
+      }.compact.join("\n")
     when "ul"
-      contents = contents.select { |line| not line.chomp.empty? }
-      contents.map { |line| "  * #{line}" }.join("\n")
+      contents.map { |line|
+        next if line.strip.empty?
+        first, *rest = line.split($/)
+
+        fpref = "  * "
+        first = "#{fpref}#{first}"
+
+        if rest.empty?
+          first
+        else
+          rpref = " " * fpref.size
+          rest = rest.map { |part| "#{rpref}#{part}" }
+          [ first, rest ].flatten.join("\n")
+        end
+      }.compact.join("\n")
     when "li"
       contents.join
     when "pre"
-      contents.map { |line| "    #{line.chomp}" }.join("\n")
+      contents.map { |line|
+        line.split($/).map { |part| "    #{part}" }.join("\n")
+      }.join("\n")
+#     contents.split($/).map { |line| "    #{line}" }.join("\n")
+#     contents.map { |line| "    #{line.chomp}" }.join("\n")
     end
   end
   private :transform_block

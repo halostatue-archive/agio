@@ -347,7 +347,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
 
   def error(string)
-    raise "Parsing error: #{string}"
+#   raise "Parsing error: #{string}"
   end
 
   # When we
