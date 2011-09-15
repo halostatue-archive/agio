@@ -1,8 +1,10 @@
 # -*- ruby encoding: utf-8 -*-
 
-  ##
-  # A Block is the fundamental collection for the Broker that is used to
-  # then generate the Markdown.
+require 'agio/html_element_description'
+
+##
+# A Block is the fundamental collection for the Broker that is used to
+# then generate the Markdown.
 class Agio::Block
   def inspect
     if options.empty?
@@ -24,12 +26,11 @@ class Agio::Block
   # The description of the HTML element the Block represents (this will
   # always be a Nokogiri::HTML::ElementDescription or +nil+).
   attr_reader :description
-  private :description
 
   # Create the Block from a tag start.
   def initialize(name, options = {})
     @name, @options = name, options
-    @description = Nokogiri::HTML::ElementDescription[name]
+    @description = Agio::HTMLElementDescription[name]
     @contents = []
   end
 
