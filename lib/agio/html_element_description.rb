@@ -62,10 +62,6 @@ class Agio::HTMLElementDescription
     @d ? @d.name : @name
   end
 
-  def block?
-    !inline?
-  end
-
   def to_s
     "#{name}: #{description}"
   end
@@ -76,6 +72,10 @@ class Agio::HTMLElementDescription
 
   def sub_elements
     @d ? @d.subelts : []
+  end
+
+  def block?
+    !inline?
   end
 
   def inline?
