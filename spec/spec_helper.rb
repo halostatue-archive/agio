@@ -6,6 +6,34 @@ $:.unshift File.expand_path('../../lib', __FILE__)
 
 require 'agio'
 
+class PrivateMethodHandler
+  def initialize(klass)
+    @methods = []
+  end
+
+  class << self
+    def classes
+      unless @classes
+        @classes = Hash.new { |h, k| h[k] = [] }
+      end
+      @classes
+    end
+
+    def remove(klass)
+      classes[klass] += klass.private_instance_methods(false)
+      classes[klass].each { |m|
+        klass.class_eval { public m }
+      }
+    end
+
+    def restore(klass)
+      classes[klass].each { |m|
+        klass.class_eval { private m }
+      }
+    end
+  end
+end
+
 # module Diff::LCS::SpecHelper
 #   def seq1
 #     %w(a b c e h j l m n p)

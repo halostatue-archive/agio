@@ -8,7 +8,7 @@ describe Agio::Block do
       expect { Agio::Block.new }.to raise_error(ArgumentError)
     end
 
-    it "should work with standard HTML elements like 'li'." do
+    it "should work with standard HTML elements like 'li'" do
       block = nil
       expect { block = Agio::Block.new('li') }.to_not raise_error
       block.name.should == 'li'
@@ -17,7 +17,7 @@ describe Agio::Block do
       block.description.should_not be_nil
     end
 
-    it "should work with non-standard elements like 'block'." do
+    it "should work with non-standard elements like 'block'" do
       block = nil
       expect { block = Agio::Block.new('block') }.to_not raise_error
       block.name.should == 'block'
@@ -26,7 +26,7 @@ describe Agio::Block do
       block.description.should be_nil
     end
 
-    it "should accept an options hash." do
+    it "should accept an options hash" do
       block = nil
       expect { block = Agio::Block.new('li', :x => :y) }.to_not raise_error
       block.name.should == 'li'

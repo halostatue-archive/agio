@@ -16,6 +16,12 @@ class Agio::Data
   def inspect
     %Q(#<#{self.class} #{value.inspect}>)
   end
+
+  ##
+  # Used mostly for testing.
+  def ==(other)
+    value == other.value
+  end
 end
 
 ##

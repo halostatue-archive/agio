@@ -166,9 +166,22 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   attr_reader :stack
   private :stack
 
+  ##
+  # Errors found while parsing the document. For example,
+  # "&lt;p&gt;&lt;em&gt;Foo&lt;/p&gt;", will produce an error when the
+  # "&lt;/p&gt;" is encountered because the "&lt;em&gt;" has not been
+  # closed. The logic for the Agio::Broker is such that this sort of error
+  # is not a problem; it implicitly closes the "&lt;em&gt;".
+  attr_reader :errors
+  ##
+  # Warnings found while parsing the document.
+  attr_reader :warnings
+
   def initialize
     @blocks   = []
     @stack    = []
+    @warnings = []
+    @errors   = []
   end
 
   ##
@@ -265,6 +278,8 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
       end
 
       stack.push object
+    else
+      raise ArgumentError, "Unknown object type being pushed."
     end
   end
   private :push
@@ -347,7 +362,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
 
   def error(string)
-#   raise "Parsing error: #{string}"
+    errors << string
   end
 
   # When we
@@ -371,7 +386,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
 
   def warning(string)
-    warn "Parsing warning: #{string}"
+    warnings << string
   end
 
   def xmldecl(version, encoding, standalone)

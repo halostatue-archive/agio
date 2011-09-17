@@ -112,6 +112,14 @@ class Agio::Block
       false
     end
   end
+
+  ##
+  # Used mostly for testing.
+  def ==(other)
+    name == other.name &&
+      options == other.options &&
+      contents == other.contents
+  end
 end
 
 # vim: ft=ruby
