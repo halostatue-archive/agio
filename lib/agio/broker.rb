@@ -193,6 +193,9 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
     object = Agio::Data.new(object) if object.kind_of? String
 
     case object
+    when Agio::XMLDecl
+      # An XML declaration goes directly to the blocks array.
+      blocks.push object
     when Agio::Data
       # The stack will only ever contain Agio::Block objects; so if we get a
       # Agio::Data object, we need push a Agio::Block onto the stack and
@@ -226,9 +229,15 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
           if top.sibling_of? object
             # If the top item is a sibling, pop the stack over.
             pop
-          elsif top.can_contain? object
+            next
+          elsif (top.can_contain?(object) ||
+                 (object.li? and top.can_contain?('ul')) ||
+                 (object.definition? and top.can_contain?('dl')))
             # If the top item in the stack can contain the current object,
-            # keep pushing down.
+            # keep pushing down. Deal with special cases like <li>, <dt>,
+            # and <dl> which can only be contained in <ul> and <dl>,
+            # respectively but where we implicitly insert blocks when we get
+            # the <li> or definition block without the outer container.
             break
           elsif top.inline? and not object.inline?
             # If the top item is a span object and the current item is not a
@@ -281,6 +290,8 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
     else
       raise ArgumentError, "Unknown object type being pushed."
     end
+
+    object
   end
   private :push
 
@@ -302,7 +313,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   # 1. If the stack is empty, append the block to the #blocks array.
   # 2. If the stack is not empty, append the block to the top item in the
   #    stack.
-  def pop(until_element = nil)
+  def pop(until_element = nil, options = nil)
     return nil if stack.empty?
 
     top = nil
@@ -328,7 +339,13 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
 
         stack[-1].append top
 
-        break if top.name == until_element
+        if top.name == until_element
+          break if options.nil?
+          if ((top.options[:prefix] == options[:prefix]) &&
+              (top.options[:uri] == options[:uri]))
+            break
+          end
+        end
       end
     end
 
@@ -358,7 +375,7 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
 
   def end_element_namespace(name, prefix = nil, uri = nil)
-    pop(name)
+    pop(name, :prefix => prefix, :uri => uri)
   end
 
   def error(string)

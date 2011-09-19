@@ -60,7 +60,14 @@ class Agio::Block
   ##
   # Returns +true+ if this Block can contain the other Block provided.
   def can_contain?(other)
-    description && description.sub_elements.include?(other.name)
+    case other
+    when Agio::Block
+      description && description.sub_elements.include?(other.name)
+    when String
+      description && description.sub_elements.include?(other)
+    else
+      false
+    end
   end
 
   ##

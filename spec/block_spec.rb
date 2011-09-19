@@ -159,6 +159,10 @@ describe Agio::Block do
       end
     end
   end
+
+  it "should be able to answer #can_contain? with a String parameter" do
+    Agio::Block.new('p').can_contain?('em').should == true
+  end
 end
 
 # vim: ft=ruby
