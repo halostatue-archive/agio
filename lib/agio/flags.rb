@@ -103,7 +103,7 @@ module Agio::Flags::ClassMethods
   #                 Tester returns +false+ if the value is +nil+ or the
   #                 Array is empty.
   def flag_builder(name, options = {})
-    raise "Flag #{name} already defined" if flags.has_key? name.to_sym
+    raise SyntaxError, "Flag #{name} already defined" if flags.has_key? name.to_sym
 
     default     = options[:default]
     type        = options[:type]
@@ -171,13 +171,14 @@ module Agio::Flags::ClassMethods
   def string_flag(name, options = {})
     options = { :default => nil }.merge(options).merge(:type => :string)
 
-    options[:default] = case options[:default]
-                        when String
-                          lambda { options[:default].dup }
+    value = options[:default]
+    options[:default] = case value
                         when nil
                           nil
+                        when String
+                          lambda { value.dup }
                         else
-                          lambda { options[:default].to_s }
+                          lambda { value.to_s }
                         end
 
     flag_builder(name, options) do |type, meth, ivar|
@@ -256,7 +257,13 @@ module Agio::Flags::ClassMethods
     options = { :default => lambda { [] } }.merge(options)
     options = options.merge(:type => :array)
     flag_builder(name, options) do |type, meth, ivar|
-      if :tester == type
+      case type
+      when :setter
+        define_method(meth) do |value|
+          value = [ value ] unless value.nil? or value.kind_of? Array
+          instance_variable_set(ivar, value)
+        end
+      when :tester
         define_method(meth) do
           value = instance_variable_get(ivar)
           !(value.nil? or value.empty?)
@@ -271,7 +278,13 @@ module Agio::Flags::ClassMethods
     options = { :default => lambda { {} } }.merge(options)
     options = options.merge(:type => :hash)
     flag_builder(name, options) do |type, meth, ivar|
-      if :tester == type
+      case type
+      when :setter
+        define_method(meth) do |value|
+          raise ArgumentError unless value.nil? or value.kind_of? Hash
+          instance_variable_set(ivar, value)
+        end
+      when :tester
         define_method(meth) do
           value = instance_variable_get(ivar)
           !(value.nil? or value.empty?)
