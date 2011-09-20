@@ -6,12 +6,12 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Austin Ziegler"]
-  s.date = "2011-09-13"
+  s.date = "2011-09-20"
   s.description = "Agio is a library and a tool for converting HTML to\n{Markdown}[http://daringfireball.net/projects/markdown/]."
   s.email = ["austin@rubyforge.org"]
   s.executables = ["agio"]
   s.extra_rdoc_files = ["Manifest.txt", "History.rdoc", "License.rdoc", "README.rdoc"]
-  s.files = ["History.rdoc", "Manifest.txt", "README.rdoc", "Rakefile", "bin/agio", "lib/agio.rb", "lib/agio/flags.rb", "License.rdoc", ".gemtest"]
+  s.files = [".rspec", "History.rdoc", "License.rdoc", "Manifest.txt", "README.rdoc", "Rakefile", "agio.gemspec", "bin/agio", "lib/agio.rb", "lib/agio/block.rb", "lib/agio/bourse.rb", "lib/agio/broker.rb", "lib/agio/data.rb", "lib/agio/flags.rb", "lib/agio/html_element_description.rb", "spec/block_spec.rb", "spec/bourse_spec.rb", "spec/broker_spec.rb", "spec/data_spec.rb", "spec/flags_spec.rb", "spec/html_element_description_spec.rb", "spec/pmh_spec.rb", "spec/spec_helper.rb", ".gemtest"]
   s.rdoc_options = ["--main", "README.rdoc"]
   s.require_paths = ["lib"]
   s.rubyforge_project = "agio"

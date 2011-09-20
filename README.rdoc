@@ -1,16 +1,52 @@
 = Agio
 
 == Description
-
 Agio is a library and a tool for converting HTML to
 {Markdown}[http://daringfireball.net/projects/markdown/].
 
 === About the Name
 
-The name was chosen because agio is "a premium on money in exchange", sort of
-the opposite of a markdown. It comes from the Italian aggio (premium), not from
-the Italian agio (ease), although the hope is that there is an ease in use of
-this library.
+The name was chosen because <em>agio</em> is "a premium on money in exchange",
+sort of the opposite of a markdown. It comes from the Italian <em>aggio</em>
+(premium), not from the Italian <em>agio</em> (ease), although the hope is that
+there is an ease in use of this library.
+
+== Why Agio?
+
+1. Agio is well tested.
+2. Agio is pure Ruby.
+3. Agio is MIT licensed.
+
+=== Agio is Well Tested
+
+With this release, there are 274 unit tests (RSpec examples) covering almost
+everything. The only things not covered are Agio itself (which mostly performs
+coordination duties) and Agio::Bourse (the parsed HTML-to-Markdown translator).
+These tests cover 85%–95% of the code known to be tested, and the modules
+currently missing test will have those tests completed prior to the release of
+Agio 1.0.
+
+In addition to the unit tests, more than a hundred manual tests have been run
+to verify the quality of output for basic HTML. These manual tests have taken
+one of two forms:
+
+1. Markdown input converted to HTML with
+   {rdiscount}[https://github.com/rtomayko/rdiscount], and then converted back
+   to Markdown with Agio. In all cases, the resulting Markdown is either
+   identical to the original or the differences can be attributed to style
+   (how Agio writes emphasized text versus the hand-written original, or how
+   Agio represents links by default). This tests Agio's round-trip capability.
+2. HTML input converted to Markdown with either Pandoc or html2txt.py,
+   converted <em>back</em> to HTML with rdiscount, and then converted once
+   again to Markdown with Agio. This tests Agio's ability to output data
+   that is syntactically similar to those of better-known and presumably
+   better-tested tools.
+
+Agio will likely have bugs, especially before version 1.0, and not all features
+are yet implemented or exposed to the user. Syntactic support is also
+incomplete, as the goal is to support many of the syntax extensions found in
+{Markdown Extra}[http://michelf.com/projects/php-markdown/extra/] or other
+popular modules, such as Github-flavoured Markdown.
 
 == Where
 
@@ -18,6 +54,44 @@ this library.
 
 == Synopsis
 
+Install Agio with:
+
   gem install agio
+
+Run Agio against HTML with:
+
+  agio input.html > output.markdown
+
+== History
+
+=== Why I Wrote Agio
+
+Agio is the result of some yak-shaving as I was looking to convert my blog
+content from {WordPress}[http://wordpress.org] to
+{Jekyll}[https://github.com/mojombo/jekyll]. The Jekyll wiki points to Thomas
+Frőssman's {Exitwp}[https://github.com/thomasf/exitwp] Python script as a
+reliable conversion mechanism, but I found that it couldn't handle the data in
+my {WordPress export file}[http://codex.wordpress.org/Tools_Export_Screen]. So,
+I ported Exitwp from Python to Ruby as
+{Poole}[https://github.com/halostatue/poole].
+
+Like Exitwp, Poole depends on {Pandoc}[http://johnmacfarlane.net/pandoc/].
+While it's an amazing tool, it took the better part of 45 minutes to compile
+the {Haskell Platform}[http://hackage.haskell.org/platform/] with
+{Homebrew}[https://github.com/mxcl/homebrew] and Pandoc with
+{Cabal}[http://www.haskell.org/cabal/]. Looking around the Ruby community,
+there wasn't a single Ruby-based HTML-to-Markdown converter that I felt I could
+trust to get everything right that was also licensed to my liking (I prefer the
+MIT license). While {Kramdown}[http://kramdown.rubyforge.org/] is impressive,
+it's GPL-licensed. I didn't want Poole (which is MIT-licensed) to depend on
+anything that provided any less freedom for any purpose.
+
+Armed with this plan, I started the process of deeply understanding how Aaron
+Swartz's {html2txt.py}[http://www.aaronsw.com/2002/html2text/] script works.
+This included an early version of Agio that was a more-or-less straightforward
+port, but produced output that was worse because of differences between
+Python's +textwrap+ module and Ruby's
+{Text::Format}[http://rubyforge.org/projects/text-format] that could not be
+cleanly resolved by tweaking Aaron's algorithm.
 
 :include: License.rdoc
