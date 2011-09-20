@@ -332,8 +332,6 @@ class Agio::Bourse
       contents.map { |line|
         line.split($/).map { |part| "    #{part}" }.join("\n")
       }.join("\n")
-#     contents.split($/).map { |line| "    #{line}" }.join("\n")
-#     contents.map { |line| "    #{line.chomp}" }.join("\n")
     end
   end
   private :transform_block

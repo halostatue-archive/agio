@@ -8,7 +8,9 @@ Hoe.plugin :doofus
 Hoe.plugin :gemspec
 Hoe.plugin :git
 
-Hoe.spec 'agio' do
+Hoe.plugins.delete :rcov
+
+spec = Hoe.spec 'agio' do
   developer('Austin Ziegler', 'austin@rubyforge.org')
 
   self.history_file = 'History.rdoc'
@@ -24,4 +26,10 @@ Hoe.spec 'agio' do
   self.extra_dev_deps << ['hoe-seattlerb', '~> 1.0']
 end
 
+RSpec::Core::RakeTask.new(:rcov) do |t|
+  t.rcov = true
+  t.rcov_opts =  %q[--exclude "osx/objc,gems/,spec/,features/"]
+  t.verbose = true
+end
+  
 # vim: syntax=ruby
