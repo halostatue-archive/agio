@@ -406,7 +406,10 @@ describe Agio::Broker do
     let(:div) { B('div') }
     let(:em) { B('em') }
     let(:nem) { B('em', :prefix => 'n', :uri => 'x:y') }
-    let(:xml) { Agio::XMLDecl.new(["1.0", "utf-8", false]) }
+    let(:xml) {
+      Agio::XMLDecl.new(:version => "1.0", :encoding => "UTF-8",
+                        :standalone => false)
+    }
 
     before(:each) { subject.push(div) }
 
@@ -526,7 +529,7 @@ describe Agio::Broker do
     end
 
     it "should push an XML declaration" do
-      subject.xmldecl("1.0", "utf-8", false)
+      subject.xmldecl("1.0", "UTF-8", false)
       subject.blocks.should == [ xml ]
       subject.stack.should == [ div ]
     end

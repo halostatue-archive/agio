@@ -407,7 +407,8 @@ class Agio::Broker < Nokogiri::XML::SAX::Document
   end
 
   def xmldecl(version, encoding, standalone)
-    push Agio::XMLDecl.new([version, encoding, standalone])
+    push Agio::XMLDecl.new(:version => version, :encoding => encoding,
+                           :standalone => standalone)
   end
 end
 
